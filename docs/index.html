@@ -14,6 +14,7 @@
         <button id="league-button" class="tab-button active" onclick="switchTab('league')">リーグ</button>
         <button id="next-match-button" class="tab-button" onclick="switchTab('next-match')">次の試合</button>
         <button id="final-button" class="tab-button" onclick="switchTab('final')">決勝</button>
+        <button id="side-button" class="tab-button" onclick="switchTab('side')">サイドイベント</button>
         <button id="stats-button" class="tab-button" onclick="switchTab('stats')">成績ページ</button>
         <button id="fullscreen-button" class="fullscreen-button" onclick="requestContainerFullscreen()">
           全画面表示
@@ -33,6 +34,10 @@
         <div id="final-section" class="section"></div>
       </div>
 
+      <div class="tab-content" id="side-content">
+        <div id="side-section" class="section"></div>
+      </div>
+
       <div class="tab-content" id="stats-content">
         <div id="stats-section" class="section"></div>
       </div>
@@ -44,7 +49,7 @@
 
     <script>
       const apiBaseUrl =
-        'https://script.google.com/macros/s/AKfycbysyZVQ3UMOgMwxFBaWgVKRQts3PJpTx6aHPfHpFAevPvPB6O_fo1BC8r-XgBCAIR8U/exec';
+        'https://script.google.com/macros/s/AKfycbycDOXIiR2jUCV5HqaLfC69R5TJ39zt3ehWEZz9tZZfme77aWQ_evdNwWezcXGr88SG/exec';
 
       function fetchData(action) {
         const loading = document.getElementById('loading');
@@ -107,6 +112,7 @@
         if (tab === 'league') fetchData('getLeagues').then(displayLeagues);
         if (tab === 'next-match') fetchData('getNextMatches').then(displayNextMatches);
         if (tab === 'final') fetchData('getFinalTournament').then(displayFinalTournament);
+        if (tab === 'side') fetchData('getSideEventRanking').then(displaySideEventRanking);
         if (tab === 'stats') fetchData('getLeagues').then(displayStats);
       }
 
@@ -237,7 +243,9 @@
         if (!columns.length) return;
 
         // グリッドアイテムをトラック幅いっぱいに広げる
-        columns.forEach((col) => { col.style.width = '100%'; });
+        columns.forEach((col) => {
+          col.style.width = '100%';
+        });
         void section.offsetHeight; // リフロー強制
 
         // コンテナ全体から逆算して確実な高さを取得する
@@ -265,8 +273,7 @@
               (parseInt(getComputedStyle(h2).marginBottom) || 0)
             : 32;
           const colPaddingV =
-            (parseInt(getComputedStyle(col).paddingTop) || 0) +
-            (parseInt(getComputedStyle(col).paddingBottom) || 0);
+            (parseInt(getComputedStyle(col).paddingTop) || 0) + (parseInt(getComputedStyle(col).paddingBottom) || 0);
 
           const rows = col.querySelectorAll('tr');
           if (!rows.length) return;
@@ -288,7 +295,7 @@
       }
 
       function fitActiveTab() {
-        const tabs = ['league', 'next-match', 'final', 'stats'];
+        const tabs = ['league', 'next-match', 'final', 'side', 'stats'];
         for (const tab of tabs) {
           const content = document.getElementById(`${tab}-content`);
           if (content && content.classList.contains('active')) {
@@ -414,6 +421,52 @@
         });
 
         requestAnimationFrame(() => requestAnimationFrame(() => fitTableSection('final-section')));
+      }
+
+      function displaySideEventRanking(data) {
+        const section = document.getElementById('side-section');
+        section.innerHTML = '';
+        section.style.display = 'grid';
+        section.style.gridTemplateColumns = '1fr';
+
+        const col = document.createElement('div');
+        col.classList.add('column');
+
+        const title = document.createElement('h2');
+        title.textContent = 'サイドイベント順位';
+        col.appendChild(title);
+
+        const table = document.createElement('table');
+        table.innerHTML = `
+          <thead>
+            <tr>
+              <th>順位</th>
+              <th>チーム</th>
+              <th>最終スコア</th>
+              <th>サイド</th>
+              <th>予選勝利点/2</th>
+            </tr>
+          </thead>
+        `;
+
+        const tbody = document.createElement('tbody');
+        (data || []).forEach((row) => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${row.rank ?? ''}</td>
+            <td>${row.teamId ?? ''}</td>
+            <td>${row.finalScore ?? ''}</td>
+            <td>${row.sidePoint ?? ''}</td>
+            <td>${row.preHalf ?? ''}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        table.appendChild(tbody);
+        col.appendChild(table);
+        section.appendChild(col);
+
+        requestAnimationFrame(() => requestAnimationFrame(() => fitTableSection('side-section')));
       }
 
       // 初期データの取得と表示
